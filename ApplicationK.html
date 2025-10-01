@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KASAPA — Pointage des choristes + Badges</title>
+<style>
+  :root {
+    --primary:#2c7be5; --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --danger:#ef4444; --success:#10b981; --border:#e5e7eb;
+  }
+  body.dark {
+    --primary:#60a5fa; --bg:#111827; --card:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --danger:#f87171; --success:#34d399; --border:#374151;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--card); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:10; }
+  h1 { margin:0; font-size:18px; }
+  .sub { color:var(--muted); font-size:12px; }
+  .bar { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs button { padding:8px 10px; border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:8px; cursor:pointer; font-weight:600; }
+  .tabs button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .ghost { border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:8px; padding:8px 10px; cursor:pointer; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .tab { display:none; }
+  .tab.active { display:block; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .row { display:grid; grid-template-columns: repeat(12, 1fr); gap:12px; }
+  .col-12 { grid-column: span 12; }
+  .col-6 { grid-column: span 6; }
+  .col-4 { grid-column: span 4; }
+  .col-3 { grid-column: span 3; }
+  @media (max-width: 900px){ .col-6,.col-4,.col-3{ grid-column: span 12; } }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  input[type="text"], input[type="date"], input[type="datetime-local"], select {
+    width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:transparent; color:inherit;
+  }
+  input[type="file"]{ width:100%; }
+  .btn { padding:10px 12px; border-radius:8px; border:1px solid transparent; cursor:pointer; font-weight:700; }
+  .btn-primary { background:var(--primary); color:#fff; }
+  .btn-outline { background:transparent; border-color:var(--border); color:var(--text); }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .btn-success { background:var(--success); color:#fff; }
+  .btn-sm { padding:6px 8px; font-size:12px; }
+  .muted { color:var(--muted); }
+  .list { display:grid; gap:10px; }
+  .item { display:grid; grid-template-columns: 56px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card); }
+  .avatar { width:56px; height:56px; border-radius:8px; object-fit:cover; background:#11111112; display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:800; }
+  .qr { height:56px; width:56px; object-fit:contain; }
+  .hidden { display:none; }
+  .pill { background:#60a5fa22; border:1px solid #60a5fa55; color:var(--primary); padding:2px 8px; border-radius:999px; font-size:12px; }
+  .divider { height:1px; background:var(--border); margin:12px 0; }
+  .right { margin-left:auto; }
+  .table { width:100%; border-collapse: collapse; }
+  .table th, .table td { border-bottom:1px solid var(--border); padding:8px; text-align:left; font-size:14px; }
+  .table th { color:var(--muted); font-weight:600; }
+  .note { font-size:12px; color:var(--muted); }
+  .stat { padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--card); }
+
+  /* Badges */
+  .badges-toolbar { display:flex; gap:8px; align-items:end; flex-wrap:wrap; }
+  .badges-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:16px; }
+  @media (max-width: 700px){ .badges-grid { grid-template-columns: 1fr; } }
+  .badge {
+    width: 86mm; height: 54mm; background:#fff; color:#000;
+    border:1px solid #ccc; border-radius:6px; padding:6mm;
+    display:grid; grid-template-columns: 1fr 1fr; grid-template-rows:auto 1fr auto; gap:3mm;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .badge-header { grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; }
+  .badge-title { font-weight:900; font-size:14pt; letter-spacing:0.5px; }
+  .badge-body { display:grid; grid-template-columns: 1fr 1fr; gap:3mm; grid-column:1/-1; }
+  .badge-text { font-size:10pt; line-height:1.25; }
+  .badge-photo { width:100%; aspect-ratio:1; object-fit:cover; border:1px solid #ddd; border-radius:4px; background:#f3f4f6; }
+  .badge-qr { width:100%; aspect-ratio:1; object-fit:contain; }
+  .badge-footer { grid-column: 1 / -1; font-size:9pt; display:flex; justify-content:space-between; align-items:center; }
+  .badge-pin { font-weight:800; }
+  .print-actions { display:flex; gap:8px; margin-top:8px; }
+  @media print{
+    header, .badges-toolbar, .print-actions, .tabs, .ghost, .note, .divider { display:none !important; }
+    main { max-width:none; margin:0; padding:0; }
+    .card { border:none; padding:0; margin:0; }
+    .badges-grid { grid-template-columns: 2fr 2fr; gap:10mm; padding:10mm; }
+    body { background:#fff; }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Chorale KASAPA</h1>
+  <div class="sub">Gestion des choristes, pointage par PIN, statistiques, partitions, badges imprimables</div>
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button data-tab="gestion" class="active">Gestion choristes</button>
+      <button data-tab="pointage">Pointage</button>
+      <button data-tab="historique">Historique</button>
+      <button data-tab="stats">Statistiques</button>
+      <button data-tab="partitions">Partitions</button>
+      <button data-tab="badges">Badges</button>
+      <button data-tab="admin">Administration</button>
+    </div>
+    <button class="ghost right" id="toggleTheme">🌙/☀️</button>
+  </div>
+</header>
+
+<main>
+  <!-- Gestion des choristes -->
+  <section id="gestion" class="tab active">
+    <div class="card">
+      <h3>Ajouter un choriste</h3>
+      <div class="row">
+        <div class="col-4">
+          <label>Nom complet</label>
+          <input type="text" id="nom" placeholder="Ex: Marie KASONGO">
+        </div>
+        <div class="col-4">
+          <label>Voix</label>
+          <select id="voix">
+            <option value="" selected disabled>-- Choisir une voix --</option>
+            <option value="Soprano">Soprano</option>
+            <option value="Alto">Alto</option>
+            <option value="Ténor">Ténor</option>
+            <option value="Basse">Basse</option>
+            <option value="Orchestre">Orchestre</option>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Sous-district</label>
+          <select id="district">
+            <option value="" selected disabled>-- Choisir un sous-district --</option>
+            <option value="Nuru">Nuru</option>
+            <option value="Météo">Météo</option>
+            <option value="Golf">Golf</option>
+            <option value="Ustawi">Ustawi</option>
+            <option value="Kasapa">Kasapa</option>
+            <option value="Uhuru">Uhuru</option>
+            <option value="Ciamalale">Ciamalale</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label>Photo (optionnel)</label>
+          <input type="file" id="photo" accept="image/*">
+        </div>
+        <div class="col-6" style="display:flex; align-items:flex-end; gap:8px;">
+          <button class="btn btn-primary" id="btnAdd">Enregistrer</button>
+          <span class="note">PIN à 4 chiffres et QR code générés automatiquement.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:end;">
+        <div class="col-4">
+          <label>Recherche</label>
+          <input type="text" id="searchChoristes" placeholder="Nom...">
+        </div>
+        <div class="col-4">
+          <label>Trier par</label>
+          <select id="sortBy">
+            <option value="nom">Nom</option>
+            <option value="voix">Voix</option>
+            <option value="district">Sous-district</option>
+          </select>
+        </div>
+        <div class="col-4" style="display:flex; gap:8px;">
+          <button class="btn btn-outline" id="toggleList">Afficher/Masquer la liste</button>
+          <button class="btn btn-outline" id="btnExportChoristes">Exporter (CSV)</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div id="listeChoristes" class="list hidden"></div>
+      <div class="note">Vous pouvez modifier le nom, changer la photo, regénérer PIN/QR, ou supprimer un choriste.</div>
+    </div>
+  </section>
+
+  <!-- Pointage -->
+  <section id="pointage" class="tab">
+    <div class="card">
+      <h3>Configuration du pointage</h3>
+      <div class="row">
+        <div class="col-6">
+          <label>Date et heure d’ouverture du pointage</label>
+          <input type="datetime-local" id="dateOuverture">
+        </div>
+        <div class="col-6" style="display:flex; align-items:flex-end;">
+          <button class="btn btn-outline" id="saveOpening">Enregistrer la date d’ouverture</button>
+          <span class="note" style="margin-left:10px;">Le pointage est bloqué avant cette date/heure.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Pointage par code PIN</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="pin" placeholder="Entrer le code PIN" style="max-width:240px;">
+        <button class="btn btn-primary" id="btnPointer">Pointer</button>
+        <span class="note">Le pointage n’apparaît que dans l’historique.</span>
+      </div>
+      <div id="lastCheckin" class="note" style="margin-top:8px;">—</div>
+    </div>
+  </section>
+
+  <!-- Historique -->
+  <section id="historique" class="tab">
+    <div class="card">
+      <div class="row" style="align-items:end;">
+        <div class="col-3">
+          <label>Du</label>
+          <input type="date" id="histFrom">
+        </div>
+        <div class="col-3">
+          <label>Au</label>
+          <input type="date" id="histTo">
+        </div>
+        <div class="col-3">
+          <label>Voix</label>
+          <select id="histVoix">
+            <option value="">Toutes</option>
+            <option value="Soprano">Soprano</option>
+            <option value="Alto">Alto</option>
+            <option value="Ténor">Ténor</option>
+            <option value="Basse">Basse</option>
+            <option value="Orchestre">Orchestre</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>Sous-district</label>
+          <select id="histDistrict">
+            <option value="">Tous</option>
+            <option value="Nuru">Nuru</option>
+            <option value="Météo">Météo</option>
+            <option value="Golf">Golf</option>
+            <option value="Ustawi">Ustawi</option>
+            <option value="Kasapa">Kasapa</option>
+            <option value="Uhuru">Uhuru</option>
+            <option value="Ciamalale">Ciamalale</option>
+          </select>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-outline" id="applyHistFilter">Appliquer les filtres</button>
+        <button class="btn btn-outline" id="toggleHistory">Afficher/Masquer l’historique</button>
+        <button class="btn btn-outline" id="btnExportHistorique" style="margin-left:auto;">Exporter (CSV)</button>
+      </div>
+      <div class="divider"></div>
+      <div id="listeHistorique" class="hidden">
+        <table class="table" id="tableHistorique">
+          <thead>
+            <tr>
+              <th>Date/Heure</th>
+              <th>Nom</th>
+              <th>Voix</th>
+              <th>District</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="note">Changer Présent/Absent nécessite le mot de passe admin (par défaut: Kasapa.Admin).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Statistiques -->
+  <section id="stats" class="tab">
+    <div class="card">
+      <h3>Statistiques générales</h3>
+      <div class="row">
+        <div class="col-3 stat">
+          <div class="muted">Choristes</div>
+          <div id="statTotal" style="font-size:22px; font-weight:800;">0</div>
+        </div>
+        <div class="col-3 stat">
+          <div class="muted">Présences enregistrées</div>
+          <div id="statPresenceTotal" style="font-size:22px; font-weight:800;">0</div>
+        </div>
+        <div class="col-3 stat">
+          <div class="muted">Taux de présence</div>
+          <div id="statTaux" style="font-size:22px; font-weight:800;">0%</div>
+        </div>
+        <div class="col-3 stat">
+          <div class="muted">Dernier pointage</div>
+          <div id="statLast" style="font-size:14px;">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Répartition par voix</h3>
+      <div id="statVoix"></div>
+      <div class="divider"></div>
+      <h3>Répartition par sous-district</h3>
+      <div id="statDistrict"></div>
+    </div>
+  </section>
+
+  <!-- Partitions -->
+  <section id="partitions" class="tab">
+    <div class="card">
+      <h3>Gestion des partitions</h3>
+      <div class="row" style="align-items:end;">
+        <div class="col-6">
+          <label>Ajouter un fichier (PDF, image, audio...)</label>
+          <input type="file" id="partitionFile" />
+        </div>
+        <div class="col-6" style="display:flex; gap:8px;">
+          <button class="btn btn-primary" id="btnAddPartition">Ajouter</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Liste des partitions</h3>
+      <div id="listePartitions" class="list"></div>
+      <div class="note">Stockage local pour démo. Nous pourrons connecter un cloud ensuite.</div>
+    </div>
+  </section>
+
+  <!-- Badges -->
+  <section id="badges" class="tab">
+    <div class="card">
+      <h3>Générer et imprimer des badges</h3>
+      <div class="badges-toolbar">
+        <div style="flex:1; max-width:280px;">
+          <label>Filtrer par nom</label>
+          <input type="text" id="badgeSearch" placeholder="Nom...">
+        </div>
+        <div style="flex:1; max-width:220px;">
+          <label>Filtrer par voix</label>
+          <select id="badgeVoix">
+            <option value="">Toutes</option>
+            <option value="Soprano">Soprano</option>
+            <option value="Alto">Alto</option>
+            <option value="Ténor">Ténor</option>
+            <option value="Basse">Basse</option>
+            <option value="Orchestre">Orchestre</option>
+          </select>
+        </div>
+        <div style="flex:1; max-width:220px;">
+          <label>Filtrer par sous-district</label>
+          <select id="badgeDistrict">
+            <option value="">Tous</option>
+            <option value="Nuru">Nuru</option>
+            <option value="Météo">Météo</option>
+            <option value="Golf">Golf</option>
+            <option value="Ustawi">Ustawi</option>
+            <option value="Kasapa">Kasapa</option>
+            <option value="Uhuru">Uhuru</option>
+            <option value="Ciamalale">Ciamalale</option>
+          </select>
+        </div>
+        <button class="btn btn-outline" id="btnPreviewBadges">Prévisualiser les badges filtrés</button>
+        <button class="btn btn-primary" id="btnPrintAllBadges">Imprimer ces badges</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="badges-grid" id="badgesGrid"></div>
+      <div class="note">Format badge: 86mm x 54mm (type carte ID). Utilisez l’impression sans marges si possible.</div>
+    </div>
+  </section>
+
+  <!-- Administration -->
+  <section id="admin" class="tab">
+    <div class="card">
+      <h3>Administration</h3>
+      <div class="row" style="align-items:end;">
+        <div class="col-4">
+          <label>Mot de passe admin actuel</label>
+          <input type="text" id="adminPwdCurrent" placeholder="Kasapa.Admin">
+        </div>
+        <div class="col-4">
+          <label>Nouveau mot de passe admin</label>
+          <input type="text" id="adminPwdNew" placeholder="Minimum 6 caractères">
+        </div>
+        <div class="col-4">
+          <button class="btn btn-outline" id="btnChangePwd">Changer le mot de passe</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-outline" id="btnReset">Réinitialiser toutes les données</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Etat et persistance
+  let choristes = [];
+  let historique = [];
+  let partitions = [];
+  let adminPwd = 'Kasapa.Admin';
+  let dateOuverture = ''; // ISO string
+
+  function loadData(){
+    try {
+      choristes = JSON.parse(localStorage.getItem('kasapa_choristes')||'[]');
+      historique = JSON.parse(localStorage.getItem('kasapa_historique')||'[]');
+      partitions = JSON.parse(localStorage.getItem('kasapa_partitions')||'[]');
+      adminPwd = localStorage.getItem('kasapa_adminPwd') || 'Kasapa.Admin';
+      dateOuverture = localStorage.getItem('kasapa_dateOuverture') || '';
+      if (JSON.parse(localStorage.getItem('kasapa_dark')||'false')) document.body.classList.add('dark');
+    } catch(e){
+      choristes=[]; historique=[]; partitions=[]; adminPwd='Kasapa.Admin'; dateOuverture='';
+    }
+  }
+  function saveData(){
+    localStorage.setItem('kasapa_choristes', JSON.stringify(choristes));
+    localStorage.setItem('kasapa_historique', JSON.stringify(historique));
+    localStorage.setItem('kasapa_partitions', JSON.stringify(partitions));
+    localStorage.setItem('kasapa_adminPwd', adminPwd);
+    localStorage.setItem('kasapa_dateOuverture', dateOuverture);
+    localStorage.setItem('kasapa_dark', JSON.stringify(document.body.classList.contains('dark')));
+  }
+
+  // Utilitaires
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const genPin = () => Math.floor(1000 + Math.random() * 9000).toString();
+  const fmtDate = iso => new Date(iso).toLocaleString();
+
+  // Tabs
+  $$('#tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      $$('#tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      $$('.tab').forEach(t=>t.classList.remove('active'));
+      $('#'+tab).classList.add('active');
+      if (tab==='gestion') renderChoristes();
+      if (tab==='historique') renderHistorique();
+      if (tab==='stats') renderStats();
+      if (tab==='partitions') renderPartitions();
+      if (tab==='pointage') syncOpeningInput();
+    });
+  });
+
+  // Thème
+  $('#toggleTheme').addEventListener('click', ()=>{
+    document.body.classList.toggle('dark');
+    saveData();
+  });
+
+  // Ajout choriste
+  $('#btnAdd').addEventListener('click', async ()=>{
+    const nom = $('#nom').value.trim();
+    const voix = $('#voix').value;
+    const district = $('#district').value;
+    if (!nom || !voix || !district){
+      alert('Veuillez renseigner le nom, la voix et le sous-district.');
+      return;
+    }
+    const pin = genPin();
+    const id = uid();
+
+    let photoData = null;
+    const file = $('#photo').files[0];
+    if (file) photoData = await readFileAsDataURL(file);
+
+    const qrData = await QRCode.toDataURL(pin);
+
+    choristes.push({ id, nom, voix, district, pin, photo: photoData, qr: qrData });
+    saveData();
+    $('#nom').value=''; $('#voix').value=''; $('#district').value=''; $('#photo').value='';
+    alert(`Choriste ajouté: ${nom}\nPIN: ${pin}`);
+    renderChoristes();
+  });
+
+  function readFileAsDataURL(file){
+    return new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Liste choristes + actions
+  $('#toggleList').addEventListener('click', ()=>{
+    $('#listeChoristes').classList.toggle('hidden');
+  });
+  $('#searchChoristes').addEventListener('input', renderChoristes);
+  $('#sortBy').addEventListener('change', renderChoristes);
+
+  function renderChoristes(){
+    const container = $('#listeChoristes');
+    container.innerHTML = '';
+    const q = ($('#searchChoristes').value||'').toLowerCase();
+    const sortBy = $('#sortBy').value || 'nom';
+    const data = choristes
+      .filter(c => c.nom.toLowerCase().includes(q))
+      .sort((a,b)=> (a[sortBy]||'').localeCompare(b[sortBy]||''));
+    if (!data.length){
+      container.innerHTML = '<div class="muted">Aucun choriste.</div>';
+      return;
+    }
+    data.forEach(c=>{
+      const div = document.createElement('div');
+      div.className='item';
+      const left = c.photo
+        ? `<img class="avatar" src="${c.photo}" alt="${c.nom}">`
+        : `<div class="avatar">${(c.nom||'?').slice(0,2).toUpperCase()}</div>`;
+      div.innerHTML = `
+        ${left}
+        <div>
+          <div style="font-weight:800;">${c.nom} <span class="pill">${c.pin}</span></div>
+          <div class="muted">${c.voix} • ${c.district}</div>
+          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" data-action="edit" data-id="${c.id}">Modifier nom</button>
+            <button class="btn btn-outline btn-sm" data-action="photo" data-id="${c.id}">Changer photo</button>
+            <button class="btn btn-outline btn-sm" data-action="regen" data-id="${c.id}">Regénérer PIN/QR</button>
+            <button class="btn btn-outline btn-sm" data-action="badge" data-id="${c.id}">Badge</button>
+            <button class="btn btn-danger btn-sm" data-action="del" data-id="${c.id}">Supprimer</button>
+          </div>
+        </div>
+        <img class="qr" src="${c.qr}" alt="QR">
+      `;
+      container.appendChild(div);
+    });
+
+    container.querySelectorAll('button[data-action]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        const idx = choristes.findIndex(x=>x.id===id);
+        if (idx < 0) return;
+
+        if (action==='edit'){
+          const nv = prompt('Nouveau nom :', choristes[idx].nom);
+          if (nv && nv.trim()){
+            choristes[idx].nom = nv.trim();
+            saveData(); renderChoristes();
+          }
+        }
+        if (action==='photo'){
+          const input = document.createElement('input');
+          input.type='file'; input.accept='image/*';
+          input.onchange = async ()=>{
+            const f = input.files[0];
+            if (f){
+              choristes[idx].photo = await readFileAsDataURL(f);
+              saveData(); renderChoristes();
+            }
+          };
+          input.click();
+        }
+        if (action==='regen'){
+          if (!confirm('Regénérer un nouveau PIN et QR pour ce choriste ?')) return;
+          const newPin = genPin();
+          choristes[idx].pin = newPin;
+          choristes[idx].qr = await QRCode.toDataURL(newPin);
+          saveData(); renderChoristes();
+          alert(`Nouveau PIN: ${newPin}`);
+        }
+        if (action==='badge'){
+          previewBadges([choristes[idx]]);
+          showTab('badges');
+        }
+        if (action==='del'){
+          if (!confirm('Supprimer ce choriste ?')) return;
+          choristes.splice(idx,1);
+          saveData(); renderChoristes();
+        }
+      });
+    });
+  }
+
+  // Pointage
+  function syncOpeningInput(){
+    if (dateOuverture){
+      $('#dateOuverture').value = toLocalDatetimeInput(dateOuverture);
+    } else {
+      $('#dateOuverture').value = '';
+    }
+  }
+  function toLocalDatetimeInput(iso){
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  $('#saveOpening').addEventListener('click', ()=>{
+    const val = $('#dateOuverture').value;
+    if (!val){ dateOuverture=''; saveData(); alert('Date d’ouverture effacée.'); return; }
+    dateOuverture = new Date(val).toISOString();
+    saveData();
+    alert('Date d’ouverture enregistrée.');
+  });
+
+  $('#btnPointer').addEventListener('click', ()=>{
+    const pin = ($('#pin').value||'').trim();
+    if (!pin){ alert('Entrez un PIN.'); return; }
+
+    if (dateOuverture){
+      const now = new Date();
+      const open = new Date(dateOuverture);
+      if (now < open){
+        alert("Le pointage n'est pas encore ouvert.");
+        return;
+      }
+    }
+
+    const c = choristes.find(x=>x.pin===pin);
+    if (!c){ alert('PIN invalide.'); return; }
+
+    const rec = { id: uid(), choristeId: c.id, nom: c.nom, voix: c.voix, district: c.district, date: new Date().toISOString(), present: true };
+    historique.unshift(rec);
+    saveData();
+    $('#lastCheckin').textContent = `Dernier pointage: ${c.nom} à ${fmtDate(rec.date)}`;
+    $('#pin').value = '';
+    renderStats();
+    alert(`Présence enregistrée pour ${c.nom}.`);
+  });
+
+  // Historique
+  $('#toggleHistory').addEventListener('click', ()=> $('#listeHistorique').classList.toggle('hidden'));
+  $('#applyHistFilter').addEventListener('click', renderHistorique);
+  $('#btnExportHistorique').addEventListener('click', ()=>{
+    const headers = ['id','date','nom','voix','district','present'];
+    const rows = historique.map(h=>[h.id, h.date, h.nom, h.voix, h.district, h.present ? '1':'0']);
+    downloadCSV('presences.csv', [headers, ...rows]);
+  });
+
+  function renderHistorique(){
+    const tbody = $('#tableHistorique tbody');
+    tbody.innerHTML = '';
+
+    const fFrom = $('#histFrom').value ? new Date($('#histFrom').value) : null;
+    const fTo = $('#histTo').value ? new Date($('#histTo').value+'T23:59:59') : null;
+    const fVoix = $('#histVoix').value;
+    const fDistrict = $('#histDistrict').value;
+
+    const rows = historique.filter(h=>{
+      const d = new Date(h.date);
+      if (fFrom && d < fFrom) return false;
+      if (fTo && d > fTo) return false;
+      if (fVoix && h.voix !== fVoix) return false;
+      if (fDistrict && h.district !== fDistrict) return false;
+      return true;
+    });
+
+    rows.forEach(h=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${fmtDate(h.date)}</td>
+        <td>${h.nom}</td>
+        <td>${h.voix}</td>
+        <td>${h.district}</td>
+        <td>${h.present ? '<span class="pill">Présent</span>' : '<span class="pill" style="color:#ff4d4f; background:#ff4d4f22; border-color:#ff4d4f55;">Absent</span>'}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" data-action="toggle" data-id="${h.id}">${h.present?'Marquer absent':'Marquer présent'}</button>
+          <button class="btn btn-danger btn-sm" data-action="del" data-id="${h.id}">Supprimer</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        const idx = historique.findIndex(x=>x.id===id);
+        if (idx<0) return;
+        const pwd = prompt('Mot de passe admin:');
+        if (pwd !== adminPwd){ alert('Mot de passe incorrect.'); return; }
+
+        if (action==='toggle'){
+          historique[idx].present = !historique[idx].present;
+        }
+        if (action==='del'){
+          historique.splice(idx,1);
+        }
+        saveData(); renderHistorique(); renderStats();
+      });
+    });
+  }
+
+  // Statistiques
+  function renderStats(){
+    $('#statTotal').textContent = choristes.length;
+    $('#statPresenceTotal').textContent = historique.length;
+    const pres = historique.filter(h=>h.present).length;
+    const taux = historique.length ? ((pres/historique.length)*100).toFixed(1) : '0.0';
+    $('#statTaux').textContent = `${taux}%`;
+    $('#statLast').textContent = historique.length ? fmtDate(historique[0].date) : '—';
+
+    const voixMap = {}, distMap = {}, voixPres = {}, distPres = {};
+    choristes.forEach(c=> { voixMap[c.voix]=(voixMap[c.voix]||0)+1; distMap[c.district]=(distMap[c.district]||0)+1; });
+    historique.forEach(h=> { if (h.present){ voixPres[h.voix]=(voixPres[h.voix]||0)+1; distPres[h.district]=(distPres[h.district]||0)+1; } });
+
+    $('#statVoix').innerHTML = renderStatRows(voixMap, voixPres);
+    $('#statDistrict').innerHTML = renderStatRows(distMap, distPres);
+  }
+  function renderStatRows(totalMap, presMap){
+    const keys = Object.keys(totalMap).sort();
+    if (!keys.length) return '<div class="muted">Aucune donnée.</div>';
+    return keys.map(k=>{
+      const t = totalMap[k]||0;
+      const p = presMap[k]||0;
+      return `
+        <div class="row" style="align-items:center; margin-bottom:6px;">
+          <div class="col-6"><strong>${k}</strong></div>
+          <div class="col-3 muted">Choristes: ${t}</div>
+          <div class="col-3 muted">Présences: ${p}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Partitions
+  $('#btnAddPartition').addEventListener('click', ()=>{
+    const file = $('#partitionFile').files[0];
+    if (!file){ alert('Choisissez un fichier.'); return; }
+    const id = uid();
+    const url = URL.createObjectURL(file);
+    partitions.unshift({ id, name: file.name, type: file.type, url, date: new Date().toISOString() });
+    saveData();
+    $('#partitionFile').value='';
+    renderPartitions();
+  });
+
+  function renderPartitions(){
+    const container = $('#listePartitions');
+    container.innerHTML = '';
+    if (!partitions.length){
+      container.innerHTML = '<div class="muted">Aucune partition.</div>';
+      return;
+    }
+    partitions.forEach(p=>{
+      const div = document.createElement('div');
+      div.className='item';
+      const icon = `<div class="avatar">${extIcon(p.name)}</div>`;
+      div.innerHTML = `
+        ${icon}
+        <div>
+          <div style="font-weight:800;">${p.name}</div>
+          <div class="muted">${p.type || '—'} • ajouté le ${fmtDate(p.date)}</div>
+          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+            <a class="btn btn-outline btn-sm" href="${p.url}" target="_blank">Ouvrir</a>
+            <button class="btn btn-danger btn-sm" data-action="del" data-id="${p.id}">Supprimer</button>
+          </div>
+        </div>
+        <div></div>
+      `;
+      container.appendChild(div);
+    });
+    container.querySelectorAll('button[data-action="del"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.id;
+        const idx = partitions.findIndex(x=>x.id===id);
+        if (idx>=0 && confirm('Supprimer cette partition ?')){
+          try { URL.revokeObjectURL(partitions[idx].url); } catch(e){}
+          partitions.splice(idx,1); saveData(); renderPartitions();
+        }
+      });
+    });
+  }
+  function extIcon(name){
+    const ext = (name.split('.').pop()||'').toLowerCase();
+    if (ext==='pdf') return 'PDF';
+    if (['png','jpg','jpeg','gif','webp'].includes(ext)) return 'IMG';
+    if (['mp3','wav','m4a','ogg'].includes(ext)) return 'AUD';
+    if (['mp4','webm','avi'].includes(ext)) return 'VID';
+    return ext.slice(0,3).toUpperCase()||'DOC';
+  }
+
+  // Administration
+  $('#btnChangePwd').addEventListener('click', ()=>{
+    const cur = $('#adminPwdCurrent').value || '';
+    const nw = $('#adminPwdNew').value || '';
+    if (cur !== adminPwd){ alert('Mot de passe actuel incorrect.'); return; }
+    if (!nw || nw.length < 6){ alert('Le nouveau mot de passe doit contenir au moins 6 caractères.'); return; }
+    adminPwd = nw; saveData();
+    $('#adminPwdCurrent').value=''; $('#adminPwdNew').value='';
+    alert('Mot de passe admin changé.');
+  });
+
+  $('#btnExportChoristes').addEventListener('click', ()=>{
+    const headers = ['id','nom','voix','district','pin'];
+    const rows = choristes.map(c=>[c.id,c.nom,c.voix,c.district,c.pin]);
+    downloadCSV('choristes.csv', [headers, ...rows]);
+  });
+
+  $('#btnReset').addEventListener('click', ()=>{
+    const pwd = prompt('Mot de passe admin:');
+    if (pwd !== adminPwd){ alert('Mot de passe incorrect.'); return; }
+    if (!confirm('Réinitialiser toutes les données locales ?')) return;
+    try { partitions.forEach(p=>URL.revokeObjectURL(p.url)); } catch(e){}
+    choristes=[]; historique=[]; partitions=[]; dateOuverture=''; adminPwd='Kasapa.Admin';
+    saveData(); renderChoristes(); renderHistorique(); renderPartitions(); renderStats(); syncOpeningInput();
+    alert('Données effacées.');
+  });
+
+  function downloadCSV(filename, rows){
+    const csv = rows.map(r=>r.map(x=> `"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 500);
+  }
+
+  // Badges
+  const badgeSearch = $('#badgeSearch');
+  const badgeVoix = $('#badgeVoix');
+  const badgeDistrict = $('#badgeDistrict');
+  $('#btnPreviewBadges').addEventListener('click', ()=>{
+    const filtered = filterBadgesSource();
+    previewBadges(filtered);
+  });
+  $('#btnPrintAllBadges').addEventListener('click', ()=>{
+    if (!$('#badgesGrid').children.length){
+      const filtered = filterBadgesSource();
+      previewBadges(filtered);
+    }
+    window.print();
+  });
+  function filterBadgesSource(){
+    const q = (badgeSearch.value||'').toLowerCase();
+    const v = badgeVoix.value;
+    const d = badgeDistrict.value;
+    return choristes.filter(c=>{
+      if (q && !c.nom.toLowerCase().includes(q)) return false;
+      if (v && c.voix !== v) return false;
+      if (d && c.district !== d) return false;
+      return true;
+    });
+  }
+  function previewBadges(list){
+    const grid = $('#badgesGrid');
+    grid.innerHTML = '';
+    if (!list.length){
+      grid.innerHTML = '<div class="muted">Aucun choriste pour ces filtres.</div>';
+      return;
+    }
+    list.forEach(c=>{
+      grid.appendChild(renderBadge(c));
+    });
+  }
+  function renderBadge(c){
+    const wrap = document.createElement('div');
+    const photo = c.photo ? `<img class="badge-photo" src="${c.photo}" alt="${c.nom}"/>` : `<div class="badge-photo" style="display:flex;align-items:center;justify-content:center;color:#999;font-weight:700;">KASAPA</div>`;
+    wrap.innerHTML = `
+      <div class="badge" data-id="${c.id}">
+        <div class="badge-header">
+          <div class="badge-title">Chorale KASAPA</div>
+          <div class="pill">${c.district}</div>
+        </div>
+        <div class="badge-body">
+          <div class="badge-text">
+            <div style="font-weight:900; font-size:14pt; line-height:1.1;">${c.nom}</div>
+            <div style="margin-top:2mm;">Voix: <strong>${c.voix}</strong></div>
+            <div>Sous-district: <strong>${c.district}</strong></div>
+          </div>
+          ${photo}
+          <img class="badge-qr" src="${c.qr}" alt="QR">
+          <div class="badge-text" style="display:flex; align-items:end; justify-content:flex-end;">
+            <div class="badge-pin">PIN: ${c.pin}</div>
+          </div>
+        </div>
+        <div class="badge-footer">
+          <div class="muted">kasapa • identification choriste</div>
+          <div class="print-actions">
+            <button class="btn btn-outline btn-sm" data-print="${c.id}">Imprimer</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const el = wrap.firstElementChild;
+    el.querySelector('[data-print]').addEventListener('click', ()=>printSingleBadge(el));
+    return el;
+  }
+  function printSingleBadge(badgeEl){
+    const w = window.open('', '_blank');
+    const styles = `
+      <style>
+        @page { size: 86mm 54mm; margin: 0; }
+        body { margin:0; }
+      </style>
+    `;
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styles}</head><body>${badgeEl.outerHTML}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>{ w.print(); setTimeout(()=>w.close(), 300); }, 300);
+  }
+
+  // Initialisation
+  loadData();
+  renderChoristes();
+  renderHistorique();
+  renderPartitions();
+  renderStats();
+  syncOpeningInput();
+</script>
+</body>
+</html>
